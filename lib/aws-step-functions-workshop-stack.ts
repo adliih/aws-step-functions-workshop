@@ -27,24 +27,24 @@ export class AwsStepFunctionsWorkshopStack extends cdk.Stack {
     // );
 
     // Basic Task State - Request Response
-    const topic = new sns.Topic(this, "RequestResponseTopic", {});
-    const taskStateReqResp = new stepfunctions.StateMachine(
-      this,
-      "RequestResponse",
-      {
-        removalPolicy: cdk.RemovalPolicy.DESTROY,
-        definition: new stepfunctions.Wait(this, "Wait for Timestamps", {
-          time: stepfunctions.WaitTime.secondsPath("$.timer_seconds"),
-        }).next(
-          new tasks.SnsPublish(this, "Send SNS Message", {
-            topic,
-            message: {
-              type: stepfunctions.InputType.TEXT,
-              value: "$.message",
-            },
-          })
-        ),
-      }
-    );
+    // const topic = new sns.Topic(this, "RequestResponseTopic", {});
+    // const taskStateReqResp = new stepfunctions.StateMachine(
+    //   this,
+    //   "RequestResponse",
+    //   {
+    //     removalPolicy: cdk.RemovalPolicy.DESTROY,
+    //     definition: new stepfunctions.Wait(this, "Wait for Timestamps", {
+    //       time: stepfunctions.WaitTime.secondsPath("$.timer_seconds"),
+    //     }).next(
+    //       new tasks.SnsPublish(this, "Send SNS Message", {
+    //         topic,
+    //         message: {
+    //           type: stepfunctions.InputType.TEXT,
+    //           value: "$.message",
+    //         },
+    //       })
+    //     ),
+    //   }
+    // );
   }
 }
