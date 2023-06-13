@@ -13,15 +13,15 @@ export class AwsStepFunctionsWorkshopStack extends cdk.Stack {
     //   visibilityTimeout: cdk.Duration.seconds(300)
     // });
 
-    const timerStateMachine = new stepfunctions.StateMachine(
-      this,
-      "TimerStateMachine",
-      {
-        removalPolicy: cdk.RemovalPolicy.DESTROY,
-        definition: new stepfunctions.Wait(this, "Wait for Timer", {
-          time: stepfunctions.WaitTime.secondsPath("$.timer_seconds"),
-        }).next(new stepfunctions.Succeed(this, "Success")),
-      }
-    );
+    // const timerStateMachine = new stepfunctions.StateMachine(
+    //   this,
+    //   "TimerStateMachine",
+    //   {
+    //     removalPolicy: cdk.RemovalPolicy.DESTROY,
+    //     definition: new stepfunctions.Wait(this, "Wait for Timer", {
+    //       time: stepfunctions.WaitTime.secondsPath("$.timer_seconds"),
+    //     }).next(new stepfunctions.Succeed(this, "Success")),
+    //   }
+    // );
   }
 }
