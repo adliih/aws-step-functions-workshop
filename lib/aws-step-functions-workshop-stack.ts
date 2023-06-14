@@ -35,7 +35,9 @@ export class AwsStepFunctionsWorkshopStack extends cdk.Stack {
 
     // this.createChoiceAndMapStack();
 
-    this.createParallelStack();
+    // this.createParallelStack();
+
+    this.createInputAndOutputProcessingStack();
   }
 
   createHelloWorldStack() {
@@ -439,6 +441,27 @@ export class AwsStepFunctionsWorkshopStack extends cdk.Stack {
 
     new cdk.CfnOutput(this, "StateMachineARN", {
       value: stateMachine.stateMachineArn,
+    });
+  }
+
+  createInputAndOutputProcessingStack() {
+    const lambdaHello = new lambda.Function(this, "Hello", {
+      runtime: lambda.Runtime.NODEJS_14_X,
+      handler: "index.handler",
+      code: lambda.InlineCode.fromInline(
+        `exports.handler = (event, context, callback) => {\n callback(null, \"Hello, \" + event.who + \"!\");\n};`
+      ),
+    });
+
+    const stateInvokeHello = new tasks.LambdaInvoke(this, "InvokeHello", {
+      lambdaFunction: lambdaHello,
+      inputPath: "$.lambda",
+      resultPath: "$.data.lambdaresult",
+      outputPath: "$.data",
+      retryOnServiceExceptions: false,
+    });
+    new stepfunctions.StateMachine(this, "InputOutput", {
+      definition: stateInvokeHello,
     });
   }
 }

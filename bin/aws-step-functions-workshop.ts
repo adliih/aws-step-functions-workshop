@@ -3,6 +3,10 @@ import "source-map-support/register";
 import * as cdk from "aws-cdk-lib";
 import { AwsStepFunctionsWorkshopStack } from "../lib/aws-step-functions-workshop-stack";
 
+import { config } from "dotenv";
+
+config();
+
 const app = new cdk.App();
 new AwsStepFunctionsWorkshopStack(app, "AwsStepFunctionsWorkshopStack", {
   /* If you don't specify 'env', this stack will be environment-agnostic.
