@@ -460,8 +460,13 @@ export class AwsStepFunctionsWorkshopStack extends cdk.Stack {
       outputPath: "$.data",
       retryOnServiceExceptions: false,
     });
+    const statePass = new stepfunctions.Pass(this, "Pass", {
+      parameters: {
+        "Sum.$": "States.MathAdd($.value1, $.value2)",
+      },
+    });
     new stepfunctions.StateMachine(this, "InputOutput", {
-      definition: stateInvokeHello,
+      definition: stateInvokeHello.next(statePass),
     });
   }
 }
