@@ -391,8 +391,23 @@ export class AwsStepFunctionsWorkshopStack extends cdk.Stack {
         integrationHttpMethod: "POST",
         options: {
           credentialsRole: apigwRole,
+          integrationResponses: [
+            {
+              statusCode: "200",
+              responseTemplates: {
+                "application/json": "$util.parseJson($input.body)",
+              },
+            },
+          ],
         },
-      })
+      }),
+      {
+        methodResponses: [
+          {
+            statusCode: "200",
+          },
+        ],
+      }
     );
     apigw.root.addResource("execute-sync").addMethod(
       "POST",
@@ -402,8 +417,23 @@ export class AwsStepFunctionsWorkshopStack extends cdk.Stack {
         integrationHttpMethod: "POST",
         options: {
           credentialsRole: apigwRole,
+          integrationResponses: [
+            {
+              statusCode: "200",
+              responseTemplates: {
+                "application/json": "$util.parseJson($input.body)",
+              },
+            },
+          ],
         },
-      })
+      }),
+      {
+        methodResponses: [
+          {
+            statusCode: "200",
+          },
+        ],
+      }
     );
 
     new cdk.CfnOutput(this, "StateMachineARN", {
