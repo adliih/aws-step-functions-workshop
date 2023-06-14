@@ -37,7 +37,9 @@ export class AwsStepFunctionsWorkshopStack extends cdk.Stack {
 
     // this.createParallelStack();
 
-    this.createInputAndOutputProcessingStack();
+    // this.createInputAndOutputProcessingStack();
+
+    this.createErrorHandlingStack();
   }
 
   createHelloWorldStack() {
@@ -468,5 +470,75 @@ export class AwsStepFunctionsWorkshopStack extends cdk.Stack {
     new stepfunctions.StateMachine(this, "InputOutput", {
       definition: stateInvokeHello.next(statePass),
     });
+  }
+
+  createErrorHandlingStack() {
+    const lambdaFail = new lambda.Function(this, "Fail", {
+      runtime: lambda.Runtime.NODEJS_14_X,
+      handler: "index.handler",
+      code: lambda.InlineCode.fromInline(
+        `
+exports.handler = async (event) => {
+  function FooError(message) {
+    this.name = 'CustomError';
+    this.message = message;
+  }
+  FooError.prototype = new Error();
+
+  const sleepSec = event.sleep || 0;
+
+  await new Promise(r => setTimeout(r, sleepSec * 1000));
+
+  throw new FooError("This is a Custom Error!");
+};
+`
+      ),
+    });
+
+    const customErrorFallback = new stepfunctions.Pass(
+      this,
+      "CustomErrorFallback",
+      {
+        result: stepfunctions.Result.fromString(
+          "This is a fallback from a custom Lambda function exception"
+        ),
+      }
+    );
+    const timeoutFallback = new stepfunctions.Pass(this, "TimeoutFallback", {
+      result: stepfunctions.Result.fromString(
+        "This is a fallback from a timeout error"
+      ),
+    });
+    const catchAllFallback = new stepfunctions.Pass(this, "CatchAllFallback", {
+      result: stepfunctions.Result.fromString(
+        "This is a fallback from any error"
+      ),
+    });
+
+    new stepfunctions.StateMachine(
+      this,
+      "ErrorHandlingStateMachineWithRetryCatch",
+      {
+        timeout: cdk.Duration.seconds(5),
+        definition: new tasks.LambdaInvoke(this, "Start", {
+          lambdaFunction: lambdaFail,
+        })
+          .addRetry({
+            errors: ["CustomError"], // only CustomError name can be retried,
+            interval: cdk.Duration.seconds(1),
+            maxAttempts: 2,
+            backoffRate: 2,
+          })
+          .addCatch(customErrorFallback, {
+            errors: ["CustomError"],
+          })
+          .addCatch(timeoutFallback, {
+            errors: [stepfunctions.Errors.TIMEOUT],
+          })
+          .addCatch(catchAllFallback, {
+            errors: [stepfunctions.Errors.ALL],
+          }),
+      }
+    );
   }
 }
