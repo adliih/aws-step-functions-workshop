@@ -8,6 +8,7 @@ import * as sqs from "aws-cdk-lib/aws-sqs";
 import * as batch from "aws-cdk-lib/aws-batch";
 import * as ec2 from "aws-cdk-lib/aws-ec2";
 import * as iam from "aws-cdk-lib/aws-iam";
+import * as apigateway from "aws-cdk-lib/aws-apigateway";
 import * as tasks from "aws-cdk-lib/aws-stepfunctions-tasks";
 import * as lambdaEventSources from "aws-cdk-lib/aws-lambda-event-sources";
 
@@ -32,7 +33,9 @@ export class AwsStepFunctionsWorkshopStack extends cdk.Stack {
 
     // this.createAwsSdkServiceIntegrationStack();
 
-    this.createChoiceAndMapStack();
+    // this.createChoiceAndMapStack();
+
+    this.createParallelStack();
   }
 
   createHelloWorldStack() {
@@ -312,6 +315,99 @@ export class AwsStepFunctionsWorkshopStack extends cdk.Stack {
 
     new stepfunctions.StateMachine(this, "MapChoice", {
       definition: iterateOverInputArray,
+    });
+  }
+
+  createParallelStack() {
+    // Lambda Functions
+    const sumFunction = new lambda.Function(this, "SumFunction", {
+      functionName: "SumFunction",
+      runtime: lambda.Runtime.NODEJS_14_X,
+      handler: "sum.handler",
+      code: lambda.Code.fromAsset("lambda"),
+    });
+
+    const avgFunction = new lambda.Function(this, "AvgFunction", {
+      functionName: "AvgFunction",
+      runtime: lambda.Runtime.NODEJS_14_X,
+      handler: "avg.handler",
+      code: lambda.Code.fromAsset("lambda"),
+    });
+
+    const maxMinFunction = new lambda.Function(this, "MaxMinFunction", {
+      functionName: "MaxMinFunction",
+      runtime: lambda.Runtime.NODEJS_14_X,
+      handler: "max-min.handler",
+      code: lambda.Code.fromAsset("lambda"),
+    });
+
+    const parallel = new stepfunctions.Parallel(this, "Parallel");
+
+    parallel.branch(
+      new tasks.LambdaInvoke(this, `Parallel 1`, {
+        lambdaFunction: sumFunction,
+        resultSelector: {
+          "sum.$": stepfunctions.JsonPath.stringAt("$.Payload.sum"),
+        },
+      }),
+      new tasks.LambdaInvoke(this, `Parallel 2`, {
+        lambdaFunction: avgFunction,
+        resultSelector: {
+          "avg.$": stepfunctions.JsonPath.stringAt("$.Payload.avg"),
+        },
+      }),
+      new tasks.LambdaInvoke(this, `Parallel 3`, {
+        lambdaFunction: maxMinFunction,
+        resultSelector: {
+          "min.$": stepfunctions.JsonPath.stringAt("$.Payload.min"),
+          "max.$": stepfunctions.JsonPath.stringAt("$.Payload.max"),
+        },
+      })
+    );
+
+    const stateMachine = new stepfunctions.StateMachine(
+      this,
+      "ParallelProcessingMachine",
+      {
+        definition: parallel,
+      }
+    );
+
+    const apigwRole = new iam.Role(this, "API GW Role", {
+      assumedBy: new iam.ServicePrincipal("apigateway.amazonaws.com"),
+    });
+    apigwRole.addManagedPolicy(
+      iam.ManagedPolicy.fromAwsManagedPolicyName("AWSStepFunctionsFullAccess")
+    );
+    // stateMachine.grantExecution(apigwRole);
+
+    const apigw = new apigateway.RestApi(this, "APIGW Parallel", {});
+
+    apigw.root.addResource("execute-async").addMethod(
+      "POST",
+      new apigateway.AwsIntegration({
+        service: "states",
+        action: "StartExecution",
+        integrationHttpMethod: "POST",
+        options: {
+          credentialsRole: apigwRole,
+        },
+      })
+    );
+    apigw.root.addResource("execute-sync").addMethod(
+      "POST",
+      new apigateway.AwsIntegration({
+        service: "states",
+        action: "StartSyncExecution",
+        integrationHttpMethod: "POST",
+        options: {
+          credentialsRole: apigwRole,
+        },
+      })
+    );
+
+    new cdk.CfnOutput(this, "StateMachineARN", {
+      value: stateMachine.stateMachineArn,
     });
   }
 }
