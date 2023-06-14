@@ -370,6 +370,7 @@ export class AwsStepFunctionsWorkshopStack extends cdk.Stack {
       "ParallelProcessingMachine",
       {
         definition: parallel,
+        stateMachineType: stepfunctions.StateMachineType.EXPRESS,
       }
     );
 
