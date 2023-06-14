@@ -27,7 +27,9 @@ export class AwsStepFunctionsWorkshopStack extends cdk.Stack {
 
     // this.createTaskStateRunAJobSyncStack(); -- SKIPPED
 
-    this.createCallbackWithTaskTokenStack();
+    // this.createCallbackWithTaskTokenStack(); -- SKIPPED, bugged out, state machine suddenly gone
+
+    this.createAwsSdkServiceIntegrationStack();
   }
 
   createHelloWorldStack() {
@@ -224,5 +226,25 @@ export class AwsStepFunctionsWorkshopStack extends cdk.Stack {
         definition: startTaskAndWaitForCallback,
       }
     );
+  }
+
+  createAwsSdkServiceIntegrationStack() {
+    const detectSentimentState = new tasks.CallAwsService(
+      this,
+      "DetectSentiment",
+      {
+        service: "comprehend",
+        action: "detectSentiment",
+        iamResources: ["*"],
+        parameters: {
+          LanguageCode: "en",
+          "Text.$": "$.Comment",
+        },
+      }
+    );
+
+    new stepfunctions.StateMachine(this, "SdkServiceIntegration", {
+      definition: detectSentimentState,
+    });
   }
 }
