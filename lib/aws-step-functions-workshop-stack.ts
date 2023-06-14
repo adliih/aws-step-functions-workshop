@@ -39,7 +39,9 @@ export class AwsStepFunctionsWorkshopStack extends cdk.Stack {
 
     // this.createInputAndOutputProcessingStack();
 
-    this.createErrorHandlingStack();
+    // this.createErrorHandlingStack();
+
+    this.createManagingStateMachineAsIaC();
   }
 
   createHelloWorldStack() {
@@ -539,6 +541,27 @@ exports.handler = async (event) => {
             errors: [stepfunctions.Errors.ALL],
           }),
       }
+    );
+  }
+
+  createManagingStateMachineAsIaC() {
+    const startState = new stepfunctions.Pass(this, "PassState", {
+      result: { value: "Hello back to you!" },
+    });
+
+    const stateMachine = new stepfunctions.StateMachine(
+      this,
+      "MyStateMachine",
+      {
+        definition: startState,
+        stateMachineType: stepfunctions.StateMachineType.EXPRESS,
+      }
+    );
+
+    const api = new apigateway.StepFunctionsRestApi(
+      this,
+      "StepFunctionsRestApi",
+      { stateMachine: stateMachine }
     );
   }
 }
