@@ -23,23 +23,23 @@ export class AwsStepFunctionsWorkshopStack extends cdk.Stack {
     //   visibilityTimeout: cdk.Duration.seconds(300)
     // });
 
-    // this.createHelloWorldStack();
+    this.createHelloWorldStack();
 
-    // this.createTaskStateRequestResponseStack();
+    this.createTaskStateRequestResponseStack();
 
     // this.createTaskStateRunAJobSyncStack(); -- SKIPPED
 
     // this.createCallbackWithTaskTokenStack(); -- SKIPPED, bugged out, state machine suddenly gone
 
-    // this.createAwsSdkServiceIntegrationStack();
+    this.createAwsSdkServiceIntegrationStack();
 
-    // this.createChoiceAndMapStack();
+    this.createChoiceAndMapStack();
 
-    // this.createParallelStack();
+    this.createParallelStack();
 
-    // this.createInputAndOutputProcessingStack();
+    this.createInputAndOutputProcessingStack();
 
-    // this.createErrorHandlingStack();
+    this.createErrorHandlingStack();
 
     this.createManagingStateMachineAsIaC();
   }
