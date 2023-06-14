@@ -3,6 +3,7 @@ import { Construct } from "constructs";
 import * as stepfunctions from "aws-cdk-lib/aws-stepfunctions";
 import * as sns from "aws-cdk-lib/aws-sns";
 import * as lambda from "aws-cdk-lib/aws-lambda";
+import * as dynamodb from "aws-cdk-lib/aws-dynamodb";
 import * as sqs from "aws-cdk-lib/aws-sqs";
 import * as batch from "aws-cdk-lib/aws-batch";
 import * as ec2 from "aws-cdk-lib/aws-ec2";
@@ -29,7 +30,9 @@ export class AwsStepFunctionsWorkshopStack extends cdk.Stack {
 
     // this.createCallbackWithTaskTokenStack(); -- SKIPPED, bugged out, state machine suddenly gone
 
-    this.createAwsSdkServiceIntegrationStack();
+    // this.createAwsSdkServiceIntegrationStack();
+
+    this.createChoiceAndMapStack();
   }
 
   createHelloWorldStack() {
@@ -245,6 +248,70 @@ export class AwsStepFunctionsWorkshopStack extends cdk.Stack {
 
     new stepfunctions.StateMachine(this, "SdkServiceIntegration", {
       definition: detectSentimentState,
+    });
+  }
+
+  createChoiceAndMapStack() {
+    const ddbTable = new dynamodb.Table(this, "DDBTable", {
+      partitionKey: { name: "id", type: dynamodb.AttributeType.STRING },
+      readCapacity: 1,
+      writeCapacity: 1,
+      tableName: "MapStateTable",
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+    });
+
+    const lowPrioOrderDetected = new stepfunctions.Succeed(
+      this,
+      "Low Priority Order Detected",
+      {}
+    );
+    const insertHighPrioOrder = new tasks.DynamoPutItem(
+      this,
+      "Insert High Priority Order",
+      {
+        table: ddbTable,
+        item: {
+          id: tasks.DynamoAttributeValue.fromString(
+            stepfunctions.JsonPath.stringAt("$.customerId")
+          ),
+          customerId: tasks.DynamoAttributeValue.fromString(
+            stepfunctions.JsonPath.stringAt("$.customerId")
+          ),
+          priority: tasks.DynamoAttributeValue.fromString(
+            stepfunctions.JsonPath.stringAt("$.priority")
+          ),
+        },
+      }
+    );
+
+    const priorityFilter = new stepfunctions.Choice(this, "Priority Filter", {})
+      .when(
+        stepfunctions.Condition.stringEquals(
+          stepfunctions.JsonPath.stringAt("$.priority"),
+          "HIGH"
+        ),
+        insertHighPrioOrder
+      )
+      .when(
+        stepfunctions.Condition.stringEquals(
+          stepfunctions.JsonPath.stringAt("$.priority"),
+          "LOW"
+        ),
+        lowPrioOrderDetected
+      )
+      .afterwards();
+
+    const iterateOverInputArray = new stepfunctions.Map(
+      this,
+      "Iterate Over Input Array",
+      {
+        inputPath: stepfunctions.JsonPath.stringAt("$.Data"),
+        maxConcurrency: 2,
+      }
+    ).iterator(priorityFilter);
+
+    new stepfunctions.StateMachine(this, "MapChoice", {
+      definition: iterateOverInputArray,
     });
   }
 }
